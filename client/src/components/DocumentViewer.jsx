@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, MessageSquare, BookOpen, Lightbulb } from 'lucide-react';
 import axios from 'axios';
 import { Virtuoso } from 'react-virtuoso';
+import { useChatStore } from '../store/chatStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -10,6 +11,7 @@ const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [toolbarPos, setToolbarPos] = useState(null);
   const [selectedText, setSelectedText] = useState('');
+  const setDocumentText = useChatStore(state => state.setDocumentText);
   
   const [pastDocs, setPastDocs] = useState([]);
   const contentRef = useRef(null);
@@ -17,6 +19,7 @@ const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
   useEffect(() => {
     if (externalDocContent) {
       setDocText(externalDocContent);
+      setDocumentText(externalDocContent); // cache for offline
     }
   }, [externalDocContent]);
 
@@ -47,6 +50,7 @@ const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDocText(res.data.text);
+      setDocumentText(res.data.text); // cache for offline search
       setDocument(res.data.documentId);
     } catch (error) {
       alert('Error uploading file: ' + (error.response?.data?.error || error.message));

@@ -14,8 +14,46 @@ import ForumSession from './models/ForumSession.js';
 import BuilderSession from './models/BuilderSession.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
+
+// Create SMTP transporter (falls back to Ethereal test account if no SMTP_USER set)
+let transporter;
+const createTransporter = async () => {
+  if (process.env.SMTP_USER && process.env.SMTP_USER !== 'your_email@gmail.com') {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      tls: { rejectUnauthorized: false }
+    });
+    // Verify SMTP connection immediately and log result
+    transporter.verify((err, ok) => {
+      if (err) {
+        console.error('SMTP ERROR: Could not authenticate:', err.message);
+        console.error('  → Check SMTP_USER and SMTP_PASS in .env');
+        console.error('  → For Gmail: make sure you are using an App Password, not your normal password.');
+        console.error('  → Generate one at: myaccount.google.com/apppasswords');
+      } else {
+        console.log('SMTP: ✅ Gmail connected successfully as:', process.env.SMTP_USER);
+      }
+    });
+  } else {
+    // Auto-create a free Ethereal test account for development
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass }
+    });
+    console.log('SMTP: Using Ethereal test account:', testAccount.user);
+    console.log('SMTP: To get the OTP, open the preview URL logged when you request a reset.');
+  }
+};
+createTransporter();
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -99,6 +137,83 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed.' });
+  }
+});
+
+// Step 1: Request OTP for password reset
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'No account found with this email.' });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = expires;
+    await user.save();
+
+    // Always log OTP to console for easy dev/debug access
+    console.log(`\n🔑 OTP for ${email}: ${otp}  (expires in 10 min)\n`);
+
+    // Send email with OTP
+    const mailOptions = {
+      from: process.env.SMTP_FROM || 'Learning Hub <noreply@learninghub.app>',
+      to: email,
+      subject: 'Learning Hub — Password Reset OTP',
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;border:1px solid #e2e8f0;border-radius:12px;">
+          <h2 style="color:#4f46e5;margin-bottom:8px;">Password Reset</h2>
+          <p style="color:#475569;">Use the one-time code below to reset your Learning Hub password. It expires in <strong>10 minutes</strong>.</p>
+          <div style="font-size:2.5rem;font-weight:700;letter-spacing:12px;text-align:center;padding:24px;background:#f1f5f9;border-radius:8px;color:#1e293b;margin:24px 0;">${otp}</div>
+          <p style="color:#94a3b8;font-size:0.875rem;">If you did not request a password reset, please ignore this email.</p>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    // Log preview URL for Ethereal (dev) accounts
+    const preview = nodemailer.getTestMessageUrl(info);
+    if (preview) console.log('OTP Email Preview URL:', preview);
+
+    res.json({ message: 'OTP sent to your email address.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to send OTP email.' });
+  }
+});
+
+// Step 2: Verify OTP and reset password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ error: 'Email, OTP, and new password are required.' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'No account found with this email.' });
+
+    if (!user.resetPasswordOtp || user.resetPasswordOtp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP. Please request a new one.' });
+    }
+    if (user.resetPasswordExpires < new Date()) {
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Valid OTP — reset password and clear OTP fields
+    user.password = newPassword;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully. You can now log in.' });
+  } catch (error) {
+    console.error('Reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password.' });
   }
 });
 

@@ -16,13 +16,13 @@ const GlobalNav = () => {
 
   return (
     <header className="navbar">
-      <Link to="/" className="nav-brand">
-        <Compass color="var(--primary)" size={28} /> AI Platform
+      <Link to="/" className="nav-link" style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Compass size={28} /> Learning Hub
       </Link>
       <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
         <Link to="/study" className="nav-link"><BookOpen size={16} /> Study</Link>
         <Link to="/forum" className="nav-link"><Users size={16} /> Forum</Link>
-        <Link to="/builder" className="nav-link"><Hammer size={16} /> Builder</Link>
+        <Link to="/builder" className="nav-link"><Hammer size={16} /> Build</Link>
         <div style={{ width: '1px', height: '24px', background: 'var(--border-color)' }}></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>{user.name}</span>

@@ -88,18 +88,38 @@ const ChatPanel = ({ documentId }) => {
 
   const generateVisualSummary = async () => {
     if (!documentId) return;
-    setMessages(prev => [...prev, { id: Date.now(), role: 'model', detailedContent: 'Generating visual summary...', isTemp: true }]);
-    try {
-      const res = await axios.post(`${API_URL}/api/study/visual-summary/${documentId}`);
-      setMessages(prev => prev.filter(m => !m.isTemp).concat({
-        id: Date.now(), role: 'model',
-        detailedContent: res.data.summary,
-        spokenSummary: "I've generated a beautiful visual summary of the document for you."
-      }));
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => prev.filter(m => !m.isTemp).concat({ id: Date.now(), role: 'model', detailedContent: 'Failed to generate visual summary.' }));
+    const { localSummaryInsights, notes, quizMistakes } = useChatStore.getState();
+    
+    let markdown = "## Algorithmic Study Summary\n\n";
+    if (localSummaryInsights.length === 0 && notes.length === 0) {
+      markdown += "You haven't requested any explanations (ELI5) or saved notes yet! Highlight some text and learn to build your algorithmic summary.\n";
+    } else {
+      if (localSummaryInsights.length > 0) {
+        markdown += "### Key Learnings (ELI5)\n";
+        localSummaryInsights.forEach((item, idx) => {
+          markdown += `**${idx + 1}. ${item.query}**\n${item.insight}\n\n`;
+        });
+      }
+      if (notes.length > 0) {
+        markdown += "### Saved Notes\n";
+        notes.forEach((note, idx) => {
+          markdown += `- ${note}\n`;
+        });
+        markdown += "\n";
+      }
+      if (quizMistakes.length > 0) {
+        markdown += "### Areas to Review\n";
+        quizMistakes.forEach((mistake, idx) => {
+          markdown += `- **Missed:** ${mistake.question} (Correct: ${mistake.correctAnswer})\n`;
+        });
+      }
     }
+
+    setMessages(prev => [...prev, {
+      id: Date.now(), role: 'model',
+      detailedContent: markdown,
+      spokenSummary: "I've generated a local algorithmic summary based on your recent activity."
+    }]);
   };
 
   const generateDigitalSummary = async () => {
@@ -118,20 +138,106 @@ const ChatPanel = ({ documentId }) => {
     }
   };
 
-  const generateFlashcards = async () => {
+  const generateFlashcards = () => {
     if (!documentId) return;
-    setMessages(prev => [...prev, { id: Date.now(), role: 'model', detailedContent: 'Creating flashcards...', isTemp: true }]);
-    try {
-      const res = await axios.post(`${API_URL}/api/flashcards/${documentId}`);
-      setMessages(prev => prev.filter(m => !m.isTemp).concat({
-        id: Date.now(), role: 'model',
-        detailedContent: res.data.flashcards,
-        spokenSummary: "I've generated classic flashcards based on the document to test your knowledge."
+    const { localSummaryInsights, notes, messages: allMsgs, localDocText } = useChatStore.getState();
+
+    const flashcards = [];
+    const seen = new Set(); // deduplicate by question
+
+    const addCard = (q, a, color) => {
+      const key = q.slice(0, 60).toLowerCase();
+      if (!seen.has(key) && a && a.trim().length > 10) {
+        seen.add(key);
+        flashcards.push({ question: q, answer: a.trim().slice(0, 350), themeColor: color });
+      }
+    };
+
+    // --- Layer 1: ELI5 insights → Q&A cards ---
+    localSummaryInsights.forEach(item => {
+      const sentences = item.insight.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/);
+      addCard(`Explain: ${item.query}`, sentences.slice(0, 2).join(' ') || item.insight, '#4f46e5');
+    });
+
+    // --- Layer 2: ALL user chat messages paired with AI replies ---
+    allMsgs.forEach((msg, idx) => {
+      if (msg.role !== 'user' || !msg.content || msg.content.length < 8) return;
+      const modelReply = allMsgs[idx + 1];
+      if (modelReply?.role === 'model' && typeof modelReply.detailedContent === 'string') {
+        const clean = modelReply.detailedContent.replace(/[#*`>]/g, '').replace(/\n+/g, ' ');
+        const sentences = clean.split(/(?<=[.!?])\s+/).filter(s => s.length > 20);
+        addCard(msg.content, sentences.slice(0, 2).join(' '), '#0891b2');
+      }
+    });
+
+    // --- Layer 3: Notes → recall cards ---
+    notes.forEach(note => {
+      addCard(`What concept does this describe?\n"${note.slice(0, 100)}"`, note, '#059669');
+    });
+
+    // --- Layer 4: Bold terms from AI messages ---
+    const allAiText = allMsgs
+      .filter(m => m.role === 'model' && typeof m.detailedContent === 'string')
+      .map(m => m.detailedContent)
+      .join('\n');
+
+    const boldTerms = [...allAiText.matchAll(/\*\*(.{3,40}?)\*\*/g)].map(m => m[1]).filter(Boolean);
+    const aiSentences = allAiText.replace(/[#*`>]/g, '').split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 40);
+    const usedTerms = new Set();
+    boldTerms.forEach(term => {
+      if (usedTerms.has(term.toLowerCase())) return;
+      usedTerms.add(term.toLowerCase());
+      const ctx = aiSentences.find(s => s.toLowerCase().includes(term.toLowerCase()));
+      if (ctx) addCard(`What is "${term}"?`, ctx.trim(), '#7c3aed');
+    });
+
+    // --- Layer 5: Mine the actual document text for key sentences ---
+    if (flashcards.length < 5 && localDocText && localDocText.length > 200) {
+      const docSentences = localDocText
+        .replace(/\r\n/g, '\n')
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 60 && s.length < 400);
+
+      // Score by information density: prefer sentences with numbers, proper nouns, colons
+      const scored = docSentences.map(s => ({
+        s,
+        score: (s.match(/\d+/g) || []).length * 2 +
+               (s.match(/[A-Z][a-z]{2,}/g) || []).length +
+               (s.includes(':') ? 3 : 0) +
+               (s.includes('is') || s.includes('are') || s.includes('means') ? 2 : 0)
       }));
-    } catch (error) {
-      console.error(error);
-      setMessages(prev => prev.filter(m => !m.isTemp).concat({ id: Date.now(), role: 'model', detailedContent: 'Failed to generate flashcards.' }));
+
+      scored.sort((a, b) => b.score - a.score);
+
+      scored.slice(0, 8).forEach(({ s }, i) => {
+        // Turn dense sentence into a fill-in-blank or recall card
+        const words = s.split(' ');
+        if (words.length > 6) {
+          const keyWord = words.find(w => w.length > 5 && /^[A-Z]/.test(w)) || words[3];
+          addCard(
+            `Complete the concept: "${s.replace(keyWord, '______')}"`,
+            `Answer: ${keyWord}\n\nFull context: ${s}`,
+            '#d97706'
+          );
+        }
+      });
     }
+
+    if (flashcards.length === 0) {
+      setMessages(prev => [...prev, {
+        id: Date.now(), role: 'model',
+        detailedContent: '📚 No flashcards yet! Ask a few questions or use ELI5 on highlighted text first — then hit Flashcards again.',
+        spokenSummary: 'Ask some questions first to build flashcard content.'
+      }]);
+      return;
+    }
+
+    setMessages(prev => [...prev, {
+      id: Date.now(), role: 'model',
+      detailedContent: flashcards,
+      spokenSummary: `Generated ${flashcards.length} flashcards from your session — no API used!`
+    }]);
   };
 
   const generateQuiz = async () => {
@@ -213,14 +319,14 @@ const ChatPanel = ({ documentId }) => {
   return (
     <div className="card chat-panel" style={{ position: 'relative' }}>
       <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-        <span style={{ fontWeight: 700 }}>AI Companion</span>
+        <span style={{ fontWeight: 700 }}>Learning Hub Agent</span>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={copyShareLink} disabled={!documentId} title="Share Session">
             <LinkIcon size={14} style={{ marginRight: '4px' }}/> Share Link
           </button>
           
           <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={generateVisualSummary} disabled={!documentId || isLoading}>
-            <ImageIcon size={14} style={{ marginRight: '4px' }}/> Visual Summary
+            <ImageIcon size={14} style={{ marginRight: '4px' }}/> Summary
           </button>
           <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={generateDigitalSummary} disabled={!documentId || isLoading}>
             <ClipboardList size={14} style={{ marginRight: '4px' }}/> Cards
@@ -287,7 +393,7 @@ const ChatPanel = ({ documentId }) => {
                         </div>
                       )
                     ) : (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.detailedContent}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} /> }}>{msg.detailedContent}</ReactMarkdown>
                     )}
                   </div>
                 </>

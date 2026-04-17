@@ -230,7 +230,7 @@ function Forum() {
                   </div>
                 )}
                 {msg.role === 'model' ? (
-                  <div className="detailed-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
+                  <div className="detailed-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} /> }}>{msg.content}</ReactMarkdown></div>
                 ) : (
                   <div>{msg.content}</div>
                 )}

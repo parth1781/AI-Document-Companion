@@ -4,8 +4,8 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-server/*.log
-server/*.txt
+pnpm-debug.log*
+lerna-debug.log*
 
 # Dependency directories
 node_modules/
@@ -16,10 +16,11 @@ server/node_modules/
 dist/
 dist-ssr/
 build/
-out/
 client/dist/
+client/build/
+server/dist/
 
-# Environment variables
+# Environment variables (SECRETS)
 .env
 .env.local
 .env.development.local
@@ -27,19 +28,37 @@ client/dist/
 .env.production.local
 client/.env
 server/.env
+*.env.json
 
-# Editor directories and files
-.idea
+# Editor / IDE settings
 .vscode/
+!.vscode/extensions.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.project
+.classpath
+.settings/
 
-# OS directories
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Test artifacts
+# Agent / Tool files
+.antigravity/
+.gemini/
+.antigravityignore
+task.md
+implementation_plan.md
+walkthrough.md
+
+# Application Specific
+server/*.log
+server/*.txt
 server/test_*.js
+uploads/
+temp/
