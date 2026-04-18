@@ -5,17 +5,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server/index.js"
+      "destination": "/api/$1"
     },
     {
       "source": "/((?!api|_next).*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "server/index.js": {
-      "maxDuration": 30,
-      "memory": 512
-    }
-  }
+  ]
 }
