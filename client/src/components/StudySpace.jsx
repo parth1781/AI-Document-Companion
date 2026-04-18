@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import DocumentViewer from './DocumentViewer';
 import ChatPanel from './ChatPanel';
-import { BookMarked, ArrowLeft } from 'lucide-react';
+import { BookMarked, ArrowUpRight } from 'lucide-react';
 import axios from 'axios';
 import { useChatStore } from '../store/chatStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-
+import { useIsMobile } from '../hooks/useIsMobile';
 import { API_URL } from '../config';
 
 function StudySpace() {
   const [documentId, setDocumentId] = useState(null);
   const [docContent, setDocContent] = useState('');
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
   const sendQuery = useChatStore((state) => state.sendQuery);
   const pushLocalMessage = useChatStore((state) => state.pushLocalMessage);
   const loadSession = useChatStore((state) => state.loadSession);
+  const [pastDocs, setPastDocs] = useState([]);
 
   useEffect(() => {
     const sharedId = searchParams.get('session');
@@ -31,7 +33,6 @@ function StudySpace() {
 
   const handleAskAction = async (type, selectedText) => {
     if (!selectedText) return;
-
     if (type === 'ask') {
       sendQuery(`Regarding this quote: "${selectedText}". Could you explain it further?`, documentId);
     } else if (type === 'eli5') {
@@ -40,20 +41,12 @@ function StudySpace() {
       const userNote = window.prompt('Enter your personal note for this highlight:');
       if (userNote) {
         try {
-          await axios.post(`${API_URL}/api/notes`, {
-            documentId,
-            highlightedText: selectedText,
-            noteText: userNote
-          });
+          await axios.post(`${API_URL}/api/notes`, { documentId, highlightedText: selectedText, noteText: userNote });
           pushLocalMessage(`Note saved for "${selectedText}": ${userNote}`);
-        } catch (error) {
-          alert('Failed to save note');
-        }
+        } catch (error) { alert('Failed to save note'); }
       }
     }
   };
-
-  const [pastDocs, setPastDocs] = useState([]);
 
   useEffect(() => {
     const fetchDocs = async () => {
@@ -68,13 +61,56 @@ function StudySpace() {
     fetchDocs();
   }, []);
 
+  /* ── MOBILE LAYOUT ─────────────────────────────────── */
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* Horizontal session strip */}
+        <div className="mobile-sessions-strip">
+          <h4>Sessions</h4>
+          <div className="mobile-sessions-list">
+            <button className="mobile-new-btn" onClick={() => window.location.href = '/study'}>
+              <ArrowUpRight size={14} /> New
+            </button>
+            {pastDocs.map(d => (
+              <button
+                key={d._id}
+                className={`mobile-session-chip${documentId === d._id ? ' active' : ''}`}
+                onClick={() => window.location.href = `/study?session=${d._id}`}
+              >
+                <BookMarked size={12} />
+                {d.originalName}
+              </button>
+            ))}
+            {pastDocs.length === 0 && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', alignSelf: 'center' }}>No sessions yet</span>}
+          </div>
+        </div>
+
+        {/* Document Panel */}
+        <div className="mobile-panel">
+          <DocumentViewer
+            setDocument={setDocumentId}
+            onAskAction={handleAskAction}
+            externalDocContent={docContent}
+          />
+        </div>
+
+        {/* Chat Panel */}
+        <div className="mobile-panel">
+          <ChatPanel documentId={documentId} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ── DESKTOP LAYOUT ────────────────────────────────── */
   return (
-    <div style={{ display: 'flex', height: '100%', flex: 1, overflow: 'hidden' }}>
+    <div className="page-container">
       {/* Session History Sidebar */}
-      <div className="session-sidebar" style={{ width: '280px', borderRight: '1px solid var(--border-color)', background: 'var(--card-bg)', display: 'flex', flexDirection: 'column' }}>
+      <div className="session-sidebar">
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
           <button className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} onClick={() => window.location.href = '/study'}>
-             <ArrowLeft size={16} style={{transform: 'rotate(135deg)'}} /> New Session
+             <ArrowUpRight size={16} /> New Session
           </button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -103,15 +139,13 @@ function StudySpace() {
         </div>
       </div>
 
-      <main className="main-layout" style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
+      <main className="page-main">
         <DocumentViewer 
           setDocument={setDocumentId} 
           onAskAction={handleAskAction}
           externalDocContent={docContent}
         />
-        <ChatPanel 
-          documentId={documentId} 
-        />
+        <ChatPanel documentId={documentId} />
       </main>
     </div>
   );

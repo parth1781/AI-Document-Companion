@@ -922,6 +922,61 @@ body {
   color: white;
 }
 
+/* ─── Page Layout Classes (desktop default) ─── */
+/* These are overridden on mobile in mobile.css   */
+.page-container {
+  display: flex;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.session-sidebar {
+  width: 280px;
+  border-right: 1px solid var(--border-color);
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.page-main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.tabs-row {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+
+/* Nav styles extracted from App.jsx inline */
+.nav-links {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+.nav-separator {
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+}
+.nav-user-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.nav-user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
 /* Base Responsive Layout Overrides */
 @media (max-width: 768px) {
   body {
@@ -933,6 +988,19 @@ body {
     height: auto;
   }
   
+  .study-container {
+    flex-direction: column;
+    overflow: visible;
+    height: auto;
+  }
+
+  .session-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    max-height: 250px;
+  }
+
   .main-layout {
     flex-direction: column;
     overflow: visible;
@@ -951,10 +1019,22 @@ body {
     padding: 1rem;
     flex-wrap: wrap;
     gap: 1rem;
+    justify-content: center;
+  }
+  
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  .nav-separator {
+    display: none;
   }
   
   .nav-brand {
     font-size: 1.15rem;
+    margin-bottom: 0.5rem;
   }
   
   .nav-link {

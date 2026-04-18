@@ -8,6 +8,7 @@ import html2pdf from 'html2pdf.js';
 import mermaid from 'mermaid';
 
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const WORKFLOWS = [
   { id: 'prd', label: 'Generate PRD', icon: <FileText size={18} /> },
@@ -34,6 +35,7 @@ const Mermaid = ({ text }) => {
 
 function Builder() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [idea, setIdea] = useState('');
   const [activeDoc, setActiveDoc] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -138,10 +140,68 @@ function Builder() {
     URL.revokeObjectURL(url);
   };
 
+  /* ── MOBILE LAYOUT ─────────────────────────────────── */
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div className="mobile-sessions-strip">
+          <h4>Projects</h4>
+          <div className="mobile-sessions-list">
+            <button className="mobile-new-btn" onClick={() => { setSessionId(null); setIdea(''); setCache({}); setActiveDoc(''); setActiveWorkflow(null); }}>
+              <ArrowLeft size={14} /> New
+            </button>
+            {pastSessions.map(s => (
+              <button key={s._id} className={`mobile-session-chip${sessionId === s._id ? ' active' : ''}`} onClick={() => loadSession(s._id)}>
+                <Hammer size={12} />{s.idea}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mobile-input-card">
+          <h3>Project Idea</h3>
+          <textarea className="mobile-textarea" placeholder="Describe your project idea..." value={idea} onChange={e => setIdea(e.target.value)} />
+        </div>
+
+        <div className="mobile-tabs-strip">
+          {WORKFLOWS.map(w => (
+            <button key={w.id} className={`mobile-tab-btn${activeWorkflow === w.id ? ' active' : ''}`}
+              onClick={() => runWorkflow(w.id)} disabled={isLoading || !idea.trim()}>
+              {w.label}
+              {isLoading && activeWorkflow === w.id && ' ...'}
+            </button>
+          ))}
+        </div>
+
+        <div className="mobile-chat-area">
+          <div className="mobile-chat-history detailed-markdown" style={{ padding: '1rem', flex: 1, overflowY: 'auto' }}>
+            {activeDoc ? (
+              <div ref={docRef}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}
+                  components={{ code({node, inline, className, children, ...props}) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    if (!inline && match && match[1] === 'mermaid') return <Mermaid text={String(children).replace(/\n$/, '')} />;
+                    return <code className={className} {...props}>{children}</code>;
+                  }}}>
+                  {activeDoc}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '3rem' }}>
+                {isLoading ? 'Generating...' : 'Tap a workflow above to generate docs.'}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── DESKTOP LAYOUT ────────────────────────────────── */
   return (
-    <div style={{ display: 'flex', height: '100%', flex: 1, overflow: 'hidden' }}>
+    <div className="page-container">
       {/* Session History Sidebar */}
-      <div className="session-sidebar" style={{ width: '280px', borderRight: '1px solid var(--border-color)', background: 'var(--card-bg)', display: 'flex', flexDirection: 'column' }}>
+      <div className="session-sidebar">
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
           <button className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} onClick={() => {
              setSessionId(null); setIdea(''); setCache({}); setActiveDoc(''); setActiveWorkflow(null);
@@ -175,7 +235,7 @@ function Builder() {
         </div>
       </div>
 
-      <main className="main-layout" style={{ flex: 1, flexDirection: 'column', overflow: 'hidden', padding: '1rem 2rem' }}>
+      <main className="page-main" style={{ flexDirection: 'column', overflow: 'hidden', padding: '1rem 2rem' }}>
         
         {/* IDEATION CONTEXT */}
         <div className="card" style={{ padding: '1.5rem', marginBottom: '1rem' }}>
@@ -194,7 +254,7 @@ function Builder() {
         </div>
 
         {/* HORIZONTAL WORKFLOW TABS */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+        <div className="tabs-row" style={{ display: 'flex', marginBottom: '1rem' }}>
           {WORKFLOWS.map(w => (
             <button 
               key={w.id} 
