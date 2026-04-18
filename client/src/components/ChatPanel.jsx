@@ -6,7 +6,7 @@ import axios from 'axios';
 import { useChatStore } from '../store/chatStore';
 import html2pdf from 'html2pdf.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const QuizModule = ({ quizData }) => {
   const [answers, setAnswers] = useState({});

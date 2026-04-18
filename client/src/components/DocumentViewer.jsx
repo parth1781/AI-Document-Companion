@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Virtuoso } from 'react-virtuoso';
 import { useChatStore } from '../store/chatStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
   const [docText, setDocText] = useState('');

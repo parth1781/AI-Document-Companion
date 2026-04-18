@@ -20,15 +20,21 @@ client/dist/
 client/build/
 server/dist/
 
-# Environment variables (SECRETS)
+# Environment variables (SECRETS — never commit these)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 client/.env
+client/.env.local
+client/.env.production
+client/.env.production.local
 server/.env
 *.env.json
+# Allow the example template (no secrets, safe to commit)
+!.env.example
 
 # Editor / IDE settings
 .vscode/

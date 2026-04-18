@@ -7,7 +7,7 @@ import axios from 'axios';
 import html2pdf from 'html2pdf.js';
 import mermaid from 'mermaid';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_URL } from '../config';
 
 const WORKFLOWS = [
   { id: 'prd', label: 'Generate PRD', icon: <FileText size={18} /> },
