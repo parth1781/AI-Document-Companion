@@ -921,3 +921,43 @@ body {
   line-height: 1;
   color: white;
 }
+
+/* Base Responsive Layout Overrides */
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    overflow: visible;
+  }
+  
+  #root {
+    height: auto;
+  }
+  
+  .main-layout {
+    flex-direction: column;
+    overflow: visible;
+    padding: 1rem;
+    gap: 1.5rem;
+    height: auto;
+  }
+  
+  .document-panel, .chat-panel {
+    flex: none;
+    min-height: 70vh;
+    height: 70vh; /* Allow inner scroll for panels */
+  }
+  
+  .navbar {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .nav-brand {
+    font-size: 1.15rem;
+  }
+  
+  .nav-link {
+    font-size: 0.85rem;
+  }
+}
