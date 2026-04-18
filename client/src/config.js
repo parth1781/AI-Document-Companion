@@ -1,10 +1,11 @@
 // Centralised API URL — import this instead of repeating in every file.
-// In production (Vercel), VITE_API_URL is '' so we use '' (same-origin relative URLs).
-// In development, it falls back to localhost.
+// In production (Vercel), we just use an empty string so fetch uses same-origin relative URLs (/api/...)
+// In development, it defaults to localhost.
 const getApiUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl !== undefined && envUrl !== null) return envUrl; // '' is valid for same-origin
-  return 'http://localhost:5000';
+  if (import.meta.env.PROD) {
+    return ''; // production: app and api are on the same domain
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000';
 };
 
 export const API_URL = getApiUrl();
