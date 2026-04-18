@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Hammer, FileText, CheckSquare, Layers, ShieldAlert, Clock, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -34,7 +33,6 @@ const Mermaid = ({ text }) => {
 };
 
 function Builder() {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [idea, setIdea] = useState('');
   const [activeDoc, setActiveDoc] = useState('');

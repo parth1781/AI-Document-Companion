@@ -4,7 +4,7 @@ import ChatPanel from './ChatPanel';
 import { BookMarked, ArrowUpRight, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useChatStore } from '../store/chatStore';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { API_URL } from '../config';
 

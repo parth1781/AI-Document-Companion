@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Users, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,7 +16,6 @@ const PERSONAS = [
 ];
 
 function Forum() {
-  const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   const [topic, setTopic] = useState('');

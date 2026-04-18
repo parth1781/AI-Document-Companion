@@ -12,8 +12,6 @@ const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
   const [toolbarPos, setToolbarPos] = useState(null);
   const [selectedText, setSelectedText] = useState('');
   const setDocumentText = useChatStore(state => state.setDocumentText);
-  
-  const [pastDocs, setPastDocs] = useState([]);
   const contentRef = useRef(null);
 
   useEffect(() => {
@@ -23,18 +21,7 @@ const DocumentViewer = ({ setDocument, onAskAction, externalDocContent }) => {
     }
   }, [externalDocContent]);
 
-  useEffect(() => {
-    const fetchDocs = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const res = await axios.get(`${API_URL}/api/documents`, { headers: { Authorization: `Bearer ${token}` } });
-          setPastDocs(res.data.documents);
-        }
-      } catch (err) { console.error(err); }
-    };
-    fetchDocs();
-  }, []);
+
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];

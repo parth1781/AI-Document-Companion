@@ -13,10 +13,9 @@ const Hero = () => {
       <div className="hero-content-split">
         {/* Left Text Content */}
         <div className="hero-text-side">
-          {/* <div className="badge">
-            <Zap size={14} color="#5e6ad2" />
-            <span>Platform v2.0 is live</span>
-          </div> */}
+          {/* 
+            Platform v2.0 badge removed for clean look
+          */}
           <h1 className="hero-title-new">
             Supercharge your tech workspace <span className="text-gradient">with AI.</span>
           </h1>
