@@ -171,17 +171,17 @@ function Forum() {
   /* ── MOBILE LAYOUT ─────────────────────────────────── */
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div className="mobile-screen">
         {/* Session chips strip */}
         <div className="mobile-sessions-strip">
           <h4>Discussions</h4>
           <div className="mobile-sessions-list">
             <button className="mobile-new-btn" onClick={() => { setSessionId(null); setTopic(''); setMessages([]); }}>
-              <ArrowUpRight size={14} /> New
+              <ArrowUpRight size={13} /> New
             </button>
             {pastSessions.map(s => (
               <button key={s._id} className={`mobile-session-chip${sessionId === s._id ? ' active' : ''}`} onClick={() => loadSession(s._id)}>
-                <Users size={12} />{s.topic}
+                <Users size={11} />{s.topic}
               </button>
             ))}
           </div>
@@ -203,20 +203,37 @@ function Forum() {
           ))}
         </div>
 
-        {/* Chat */}
+        {/* Chat area - scrollable */}
         <div className="mobile-chat-area">
-          <div className="mobile-chat-history"><ChatMessages /></div>
-          <form className="mobile-chat-input-area" onSubmit={handleSubmit}>
-            <div className="chat-input-form">
-              <input type="text" className="chat-input" placeholder={topic ? "Your thoughts..." : "Enter a topic first..."}
-                value={input} onChange={e => setInput(e.target.value)} disabled={isLoading || !topic.trim()} />
-              <button type="submit" className="btn btn-icon" disabled={!input.trim() || isLoading || !topic.trim()}><Send size={18} /></button>
-            </div>
+          <div className="mobile-chat-history">
+            {messages.length === 0 && (
+              <div className="mobile-placeholder">
+                <Users size={40} />
+                <strong style={{ fontSize: '1.1rem', color: 'var(--text-main)' }}>Start a Discussion</strong>
+                <span>Enter a topic above, then tap a Persona to invite them to speak.</span>
+              </div>
+            )}
+            <ChatMessages />
+          </div>
+
+          {/* Fixed bottom input bar */}
+          <form className="mobile-input-bar" onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder={topic ? "Add your thoughts..." : "Enter a topic first..."}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              disabled={isLoading || !topic.trim()}
+            />
+            <button type="submit" className="mobile-send-btn" disabled={!input.trim() || isLoading || !topic.trim()}>
+              <Send size={20} />
+            </button>
           </form>
         </div>
       </div>
     );
   }
+
 
   /* ── DESKTOP LAYOUT ────────────────────────────────── */
   return (

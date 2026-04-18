@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DocumentViewer from './DocumentViewer';
 import ChatPanel from './ChatPanel';
-import { BookMarked, ArrowUpRight } from 'lucide-react';
+import { BookMarked, ArrowUpRight, Upload } from 'lucide-react';
 import axios from 'axios';
 import { useChatStore } from '../store/chatStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,10 +11,10 @@ import { API_URL } from '../config';
 function StudySpace() {
   const [documentId, setDocumentId] = useState(null);
   const [docContent, setDocContent] = useState('');
+  const [mobileView, setMobileView] = useState('document'); // 'document' | 'chat'
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   const sendQuery = useChatStore((state) => state.sendQuery);
   const pushLocalMessage = useChatStore((state) => state.pushLocalMessage);
   const loadSession = useChatStore((state) => state.loadSession);
@@ -35,15 +35,17 @@ function StudySpace() {
     if (!selectedText) return;
     if (type === 'ask') {
       sendQuery(`Regarding this quote: "${selectedText}". Could you explain it further?`, documentId);
+      if (isMobile) setMobileView('chat');
     } else if (type === 'eli5') {
-      sendQuery(`ELI5 (Explain Like I'm 5) the following quote: "${selectedText}"`, documentId);
+      sendQuery(`ELI5 the following: "${selectedText}"`, documentId);
+      if (isMobile) setMobileView('chat');
     } else if (type === 'note') {
-      const userNote = window.prompt('Enter your personal note for this highlight:');
+      const userNote = window.prompt('Enter your note:');
       if (userNote) {
         try {
           await axios.post(`${API_URL}/api/notes`, { documentId, highlightedText: selectedText, noteText: userNote });
-          pushLocalMessage(`Note saved for "${selectedText}": ${userNote}`);
-        } catch (error) { alert('Failed to save note'); }
+          pushLocalMessage(`Note saved: ${userNote}`);
+        } catch { alert('Failed to save note'); }
       }
     }
   };
@@ -64,13 +66,13 @@ function StudySpace() {
   /* ── MOBILE LAYOUT ─────────────────────────────────── */
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        {/* Horizontal session strip */}
+      <div className="mobile-screen">
+        {/* Horizontal session chips */}
         <div className="mobile-sessions-strip">
           <h4>Sessions</h4>
           <div className="mobile-sessions-list">
             <button className="mobile-new-btn" onClick={() => window.location.href = '/study'}>
-              <ArrowUpRight size={14} /> New
+              <ArrowUpRight size={13} /> New
             </button>
             {pastDocs.map(d => (
               <button
@@ -78,26 +80,54 @@ function StudySpace() {
                 className={`mobile-session-chip${documentId === d._id ? ' active' : ''}`}
                 onClick={() => window.location.href = `/study?session=${d._id}`}
               >
-                <BookMarked size={12} />
+                <BookMarked size={11} />
                 {d.originalName}
               </button>
             ))}
-            {pastDocs.length === 0 && <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', alignSelf: 'center' }}>No sessions yet</span>}
           </div>
         </div>
 
-        {/* Document Panel */}
-        <div className="mobile-panel">
-          <DocumentViewer
-            setDocument={setDocumentId}
-            onAskAction={handleAskAction}
-            externalDocContent={docContent}
-          />
+        {/* Document / Chat tab switcher */}
+        <div style={{ display: 'flex', background: '#f8fafc', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+          <button
+            onClick={() => setMobileView('document')}
+            style={{
+              flex: 1, padding: '0.75rem', border: 'none', background: 'transparent',
+              fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
+              borderBottom: mobileView === 'document' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
+              color: mobileView === 'document' ? 'var(--primary)' : 'var(--text-muted)',
+              transition: 'all 0.2s'
+            }}
+          >
+            📄 Document
+          </button>
+          <button
+            onClick={() => setMobileView('chat')}
+            style={{
+              flex: 1, padding: '0.75rem', border: 'none', background: 'transparent',
+              fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit',
+              borderBottom: mobileView === 'chat' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
+              color: mobileView === 'chat' ? 'var(--primary)' : 'var(--text-muted)',
+              transition: 'all 0.2s'
+            }}
+          >
+            💬 Chat
+          </button>
         </div>
 
-        {/* Chat Panel */}
-        <div className="mobile-panel">
-          <ChatPanel documentId={documentId} />
+        {/* Active Panel */}
+        <div className="mobile-chat-area">
+          {mobileView === 'document' ? (
+            <div className="mobile-doc-panel">
+              <DocumentViewer
+                setDocument={(id) => { setDocumentId(id); setMobileView('chat'); }}
+                onAskAction={handleAskAction}
+                externalDocContent={docContent}
+              />
+            </div>
+          ) : (
+            <ChatPanel documentId={documentId} />
+          )}
         </div>
       </div>
     );
@@ -106,7 +136,6 @@ function StudySpace() {
   /* ── DESKTOP LAYOUT ────────────────────────────────── */
   return (
     <div className="page-container">
-      {/* Session History Sidebar */}
       <div className="session-sidebar">
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
           <button className="btn btn-primary" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }} onClick={() => window.location.href = '/study'}>
@@ -116,18 +145,10 @@ function StudySpace() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem', paddingLeft: '0.5rem', letterSpacing: '0.5px' }}>Session History</h4>
           {pastDocs.map(d => (
-             <button 
-               key={d._id} 
-               onClick={() => window.location.href = `/study?session=${d._id}`}
-               style={{
-                 display: 'flex', alignItems: 'center', gap: '8px',
-                 width: '100%', textAlign: 'left', padding: '0.75rem', 
-                 background: documentId === d._id ? '#eef2ff' : 'transparent', 
-                 color: documentId === d._id ? 'var(--primary)' : 'var(--text-main)',
-                 border: 'none', borderRadius: '8px', cursor: 'pointer',
-                 transition: 'all 0.2s', fontSize: '0.9rem', fontWeight: documentId === d._id ? 600 : 400
-               }}
-             >
+             <button key={d._id} onClick={() => window.location.href = `/study?session=${d._id}`}
+               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', textAlign: 'left', padding: '0.75rem',
+                 background: documentId === d._id ? '#eef2ff' : 'transparent', color: documentId === d._id ? 'var(--primary)' : 'var(--text-main)',
+                 border: 'none', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem', fontWeight: documentId === d._id ? 600 : 400 }}>
                <BookMarked size={16} />
                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', width: '100%' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{d.originalName}</span>
@@ -140,11 +161,7 @@ function StudySpace() {
       </div>
 
       <main className="page-main">
-        <DocumentViewer 
-          setDocument={setDocumentId} 
-          onAskAction={handleAskAction}
-          externalDocContent={docContent}
-        />
+        <DocumentViewer setDocument={setDocumentId} onAskAction={handleAskAction} externalDocContent={docContent} />
         <ChatPanel documentId={documentId} />
       </main>
     </div>

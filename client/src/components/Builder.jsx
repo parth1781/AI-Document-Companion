@@ -143,40 +143,52 @@ function Builder() {
   /* ── MOBILE LAYOUT ─────────────────────────────────── */
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <div className="mobile-screen">
+        {/* Session chips strip */}
         <div className="mobile-sessions-strip">
           <h4>Projects</h4>
           <div className="mobile-sessions-list">
             <button className="mobile-new-btn" onClick={() => { setSessionId(null); setIdea(''); setCache({}); setActiveDoc(''); setActiveWorkflow(null); }}>
-              <ArrowLeft size={14} /> New
+              <ArrowLeft size={13} /> New
             </button>
             {pastSessions.map(s => (
               <button key={s._id} className={`mobile-session-chip${sessionId === s._id ? ' active' : ''}`} onClick={() => loadSession(s._id)}>
-                <Hammer size={12} />{s.idea}
+                <Hammer size={11} />{s.idea}
               </button>
             ))}
           </div>
         </div>
 
+        {/* Idea input */}
         <div className="mobile-input-card">
           <h3>Project Idea</h3>
-          <textarea className="mobile-textarea" placeholder="Describe your project idea..." value={idea} onChange={e => setIdea(e.target.value)} />
+          <textarea className="mobile-textarea" placeholder="Describe your project idea in detail..." value={idea} onChange={e => setIdea(e.target.value)} />
         </div>
 
+        {/* Workflow tabs */}
         <div className="mobile-tabs-strip">
           {WORKFLOWS.map(w => (
             <button key={w.id} className={`mobile-tab-btn${activeWorkflow === w.id ? ' active' : ''}`}
               onClick={() => runWorkflow(w.id)} disabled={isLoading || !idea.trim()}>
               {w.label}
-              {isLoading && activeWorkflow === w.id && ' ...'}
+              {isLoading && activeWorkflow === w.id && ' ⏳'}
             </button>
           ))}
         </div>
 
+        {/* Document output - scrollable */}
         <div className="mobile-chat-area">
-          <div className="mobile-chat-history detailed-markdown" style={{ padding: '1rem', flex: 1, overflowY: 'auto' }}>
+          <div className="mobile-doc-output detailed-markdown">
             {activeDoc ? (
               <div ref={docRef}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <button className="btn btn-outline" onClick={downloadMD} style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem' }}>
+                    <Download size={13} style={{ marginRight: '4px' }} /> .MD
+                  </button>
+                  <button className="btn btn-primary" onClick={downloadPDF} style={{ fontSize: '0.82rem', padding: '0.4rem 0.8rem' }}>
+                    <Download size={13} style={{ marginRight: '4px' }} /> .PDF
+                  </button>
+                </div>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}
                   components={{ code({node, inline, className, children, ...props}) {
                     const match = /language-(\w+)/.exec(className || '');
@@ -187,8 +199,12 @@ function Builder() {
                 </ReactMarkdown>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '3rem' }}>
-                {isLoading ? 'Generating...' : 'Tap a workflow above to generate docs.'}
+              <div className="mobile-placeholder">
+                <Hammer size={44} />
+                <strong style={{ fontSize: '1.15rem', color: 'var(--text-main)' }}>
+                  {isLoading ? 'Generating your document...' : 'Build Something'}
+                </strong>
+                <span>{isLoading ? 'Please wait, AI is working...' : 'Describe your idea above, then tap a workflow to generate professional docs.'}</span>
               </div>
             )}
           </div>
@@ -196,6 +212,7 @@ function Builder() {
       </div>
     );
   }
+
 
   /* ── DESKTOP LAYOUT ────────────────────────────────── */
   return (
